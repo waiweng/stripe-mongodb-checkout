@@ -251,6 +251,28 @@ The server creates a PaymentIntent with **amount in cents** (from your dollar ca
 
 ---
 
+### GitHub
+
+**Repository:** [github.com/waiweng/stripe-mongodb-checkout](https://github.com/waiweng/stripe-mongodb-checkout)
+
+```bash
+git clone https://github.com/waiweng/stripe-mongodb-checkout.git
+cd stripe-mongodb-checkout
+cp .env.example .env   # add your keys locally — never commit .env
+```
+
+**Security:** Real credentials belong only in `.env` on your machine. That file is listed in `.gitignore` along with other secret patterns (`*.pem`, `.env.*`, etc.). Only **`.env.example`** (placeholders) is tracked in git.
+
+To **publish updates** after creating the empty repo on GitHub (no README/license added in the web UI, or allow unrelated histories):
+
+```bash
+git push -u origin master
+```
+
+If your default branch on GitHub is `main`, run `git branch -M main` once before the first push, or push with `git push -u origin master:main`.
+
+---
+
 ### Licence
 
 MIT (see original boilerplate).
