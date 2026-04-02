@@ -255,9 +255,3 @@ The server creates a PaymentIntent with **amount in cents** (from your dollar ca
 #### Multi-currency with Stripe Adaptive Pricing
 
 **Business problem:** International pricing without duplicate catalogues everywhere. **Approach:** Stripe **Adaptive Pricing** plus a canonical price or product reference in MongoDB.
-
----
-
-### Licence
-
-MIT (see original boilerplate).
