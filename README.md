@@ -144,11 +144,15 @@ If something fails, check the server logs and that `stripe listen` is forwarding
    - Inserts a **`pending`** row in **`orders`** with **`amount` in dollars** (snapshot) and `stripe_payment_intent_id` (`pi_…`).
    - Returns the **`client_secret`** to the browser.
 
-4. **`public/js/checkout.js`** loads **Stripe.js**, mounts the **Payment Element**, and the shopper pays. On success, Stripe redirects to **`/confirmation`**.
+4. **`public/js/checkout.js`** loads **Stripe.js**, mounts the **Payment Element**, and the shopper pays. On success, Stripe redirects the browser to **`/confirmation`**.
 
-5. The **confirmation** route verifies the PaymentIntent with Stripe, then runs a **MongoDB transaction** that marks the order **`completed`** and **decrements `stock`** when the order was still **`pending`**.
+5. **Completing the order (same logic, two ways Stripe can tell you payment succeeded):**
 
-6. **`POST /webhook`** receives Stripe events. Each is logged in **`payment_events`**. For **`payment_intent.succeeded`**, the same **transaction** completes the order and adjusts stock. Duplicate **`evt_…`** ids are detected so the same webhook is not processed twice—relevant for **idempotency** and **audit**.
+   - **`GET /confirmation`** — The shopper lands here after paying. The server asks Stripe whether that **PaymentIntent** is **`succeeded`**, then runs **one MongoDB transaction**: if the order is still **`pending`**, set it to **`completed`** and **decrement** the product’s **`stock`** by 1. If the order is already **`completed`**, the transaction does nothing further (safe if something else already finished the sale).
+
+   - **`POST /webhook`** — Independently, Stripe sends events to your server (for example when you use **`stripe listen`**). **Every** event is stored in **`payment_events`** (full payload, **`evt_…`** id) for **audit**. When the event is **`payment_intent.succeeded`**, the app runs the **same** completion transaction as above. Stripe may deliver the same event more than once; the **`evt_…`** id is used so duplicate deliveries are not double-processed—important for **idempotency** and **reconciliation**.
+
+   In practice, **either** the redirect **or** the webhook may run first, or **both**. The shared transaction and order state make that safe.
 
 #### Stripe APIs used and why
 
@@ -198,7 +202,7 @@ flowchart TB
   API -.->|payment events| EVT
 ```
 
-**Flows in words:** the shopper loads the catalogue from **MongoDB**, starts checkout, and the server creates a **PaymentIntent** on **Stripe** while writing **pending** orders (and customers) to **MongoDB**. The **Payment Element** talks to **Stripe** to complete the card flow. After success, the browser hits **/confirmation** and the server runs a **transaction** on **MongoDB** (order completed + stock). In parallel, **Stripe** sends **webhooks** to the same app, which logs **`payment_events`** and runs the same completion logic—**`stripe_payment_intent_id`** links orders to **`pi_…`**, **`stripe_event_id`** links audit rows to **`evt_…`**.
+**Flows in words:** the shopper loads the catalogue from **MongoDB**, starts checkout, and the server creates a **PaymentIntent** on **Stripe** while writing **pending** orders (and customers) to **MongoDB**. The **Payment Element** completes payment with **Stripe**. After that, **completion** runs in **MongoDB** (order **`completed`** + **stock** down by 1) from **`/confirmation`** and/or from **`payment_intent.succeeded`** webhooks—same transaction helper in code. **`stripe_payment_intent_id`** ties **`orders`** to **`pi_…`**; **`payment_events`** stores **`evt_…`** for each webhook delivery.
 
 ---
 
