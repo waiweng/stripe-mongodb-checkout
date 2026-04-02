@@ -12,7 +12,9 @@ The walkthrough below follows a shopper from the **Stripe Press Shop** catalogue
 
 After the card details are submitted, Stripe finalizes the **PaymentIntent** and the app shows the **order confirmation**. Returning to the shop, the **in-stock count** for that book drops by one. That inventory change is coordinated with payment success using **Stripe webhooks** (so the backend learns the charge succeeded even if the browser navigates away) and a **MongoDB multi-document transaction** so the order moves to **completed** and **stock** is decremented atomically—only when the payment is genuinely successful.
 
-![End-to-end recording: catalogue → checkout with Payment Element → confirmation → inventory decreases](docs/images/purchase-flow-demo.png)
+The image below is stored as **GIF** so GitHub can render it in the README. For a **full animated** walkthrough (mouse movement, typing, payment step-up), export your screen recording as GIF and replace [`docs/images/purchase-flow-demo.gif`](docs/images/purchase-flow-demo.gif).
+
+![End-to-end walkthrough: catalogue → checkout with Payment Element → confirmation → inventory decreases](docs/images/purchase-flow-demo.gif)
 
 ---
 
@@ -166,36 +168,37 @@ If something fails, check the server logs and that `stripe listen` is forwarding
 | **`orders`** | `customer_id`, `product_id`, **`product_title`** (snapshot), **amount (dollars, matches Stripe charge after conversion)**, currency, **`status`**, **`stripe_payment_intent_id`**, timestamps. | Purchase attempts; **`stripe_payment_intent_id`** joins to Stripe. |
 | **`payment_events`** | **`stripe_event_id`** (`evt_…`, unique), **event_type**, **payload**, **`processed_successfully`**, **`received_at`**, optional error fields. | **Audit** and **deduplication** when Stripe retries webhooks. |
 
-#### Architecture (ASCII)
+#### Architecture
 
-```
-  Browser                    Express app                 Stripe API
-     |                            |                          |
-     |  GET /  (list books)       |                          |
-     | -------------------------> | ---- read products ----> MongoDB Atlas
-     | <------------------------- |     (bookstore DB)       |
-     |                            |                          |
-     |  POST /create-payment-intent                          |
-     | -------------------------> | ---- Customers / ------->|
-     |                            |      PaymentIntents      |
-     |                            | ---- write customers, ---> MongoDB Atlas
-     |                            |      orders (pending)    |
-     | <----- client_secret ----- |                          |
-     |                            |                          |
-     |  Stripe.js + Payment Element ------------------------>|
-     |                            |                          |
-     |  redirect /confirmation    |                          |
-     | -------------------------> | ---- retrieve PI -------->|
-     |                            | ---- transaction: -----> MongoDB Atlas
-     |                            |      order + stock      |
-     |                            |                          |
-     |                            |  POST /webhook <--------- Stripe (events)
-     |                            | ---- payment_events ----> MongoDB Atlas
-     |                            | ---- transaction: -----> MongoDB Atlas
-     |                            |      order + stock      |
+```mermaid
+flowchart TB
+  subgraph browser [Browser]
+    Shop[Shop and checkout]
+    PE[Payment Element]
+  end
+
+  subgraph server [Express]
+    App[app.js]
+  end
+
+  subgraph atlas [MongoDB Atlas]
+    DB[(bookstore)]
+  end
+
+  subgraph stripeCloud [Stripe]
+    API[Payments API]
+    EVT[Event webhooks]
+  end
+
+  Shop -->|GET pages POST create-payment-intent| App
+  PE -->|Stripe.js confirmPayment| API
+  App <-->|native driver| DB
+  App <-->|Customers PaymentIntents| API
+  EVT -->|POST webhook| App
+  API -.->|payment events| EVT
 ```
 
-**Note:** **`stripe_payment_intent_id`** links MongoDB orders to Stripe’s PaymentIntent (`pi_…`). **`stripe_event_id`** in **`payment_events`** links webhook deliveries to Stripe’s event id (`evt_…`).
+**Flows in words:** the shopper loads the catalogue from **MongoDB**, starts checkout, and the server creates a **PaymentIntent** on **Stripe** while writing **pending** orders (and customers) to **MongoDB**. The **Payment Element** talks to **Stripe** to complete the card flow. After success, the browser hits **/confirmation** and the server runs a **transaction** on **MongoDB** (order completed + stock). In parallel, **Stripe** sends **webhooks** to the same app, which logs **`payment_events`** and runs the same completion logic—**`stripe_payment_intent_id`** links orders to **`pi_…`**, **`stripe_event_id`** links audit rows to **`evt_…`**.
 
 ---
 
