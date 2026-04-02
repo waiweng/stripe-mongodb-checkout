@@ -12,10 +12,9 @@ The walkthrough below follows a shopper from the **Stripe Press Shop** catalogue
 
 After the card details are submitted, Stripe finalizes the **PaymentIntent** and the app shows the **order confirmation**. Returning to the shop, the **in-stock count** for that book drops by one. That inventory change is coordinated with payment success using **Stripe webhooks** (so the backend learns the charge succeeded even if the browser navigates away) and a **MongoDB multi-document transaction** so the order moves to **completed** and **stock** is decremented atomically—only when the payment is genuinely successful.
 
-The image below is stored as **GIF** so GitHub can render it in the README. .
-![StripePress_clip](https://github.com/user-attachments/assets/590e3cff-11b4-4d9a-a0f6-1427464fd5e8)
+**Animated walkthrough** (GIF hosted on GitHub — catalogue → checkout → Payment Element → confirmation → stock decrease):
 
-![End-to-end walkthrough: catalogue → checkout with Payment Element → confirmation → inventory decreases](docs/images/purchase-flow-demo.gif)
+![End-to-end walkthrough: Stripe Press Shop from Buy now through payment to updated inventory](https://github.com/user-attachments/assets/590e3cff-11b4-4d9a-a0f6-1427464fd5e8)
 
 ---
 
