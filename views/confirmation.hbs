@@ -1,0 +1,32 @@
+<main>
+  {{#if error}}
+  <div class="mt-40 text-center">
+    <h1 class="h3 text-danger">Something went wrong</h1>
+    <p class="text-secondary mt-3">{{error}}</p>
+    {{#if paymentIntentId}}
+    <p class="small text-muted mt-2">Reference: <code>{{paymentIntentId}}</code></p>
+    {{/if}}
+    <a href="/" class="btn btn-outline-primary mt-4">Back to shop</a>
+  </div>
+  {{else}}
+  <div class="mt-40 text-center text-success">
+    <h1 class="h2">
+      <i class="far fa-check-circle" aria-hidden="true"></i>
+      Thank you for your order
+    </h1>
+  </div>
+  <div class="mt-40">
+    <div class="card box-shadow max-width-confirmation mx-auto">
+      <div class="card-body">
+        <h6 class="text-uppercase text-muted small">Order summary</h6>
+        <p class="mb-1"><strong>{{bookTitle}}</strong></p>
+        <p class="mb-1">Amount charged: <strong>{{amountCharged}} {{currency}}</strong></p>
+        <p class="mb-0 small text-muted">Stripe PaymentIntent: <code>{{paymentIntentId}}</code></p>
+      </div>
+    </div>
+    <div class="text-center mt-40">
+      <a href="/" class="btn btn-primary">Continue shopping</a>
+    </div>
+  </div>
+  {{/if}}
+</main>

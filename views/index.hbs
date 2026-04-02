@@ -1,49 +1,38 @@
+{{#if error}}
+<div class="alert alert-danger mt-3" role="alert">
+  {{error}}
+</div>
+{{/if}}
 <div class="text-center mt-40">
   <h1>
     Stripe Press Shop
   </h1>
   <p class="text-secondary">
-    Select an item to purchase
+    Select a book to purchase
   </p>
 </div>
 <div class="mt-40 row">
-  <div class="col">
-    <div class="card box-shadow">
-      <img src="/images/art-science-eng.jpg" class="card-img-top" alt="...">
-      <div class="card-body">
-        <h5 class="card-title">The Art of Doing Science and Engineering</h5>
-        <strong>Richard Hamming</strong>
-        <p class="card-text mt-20">
-          The Art of Doing Science and Engineering is a reminder that a childlike capacity for learning and creativity are accessible to everyone.
+  {{#each products}}
+  <div class="col-md-4 mb-4">
+    <div class="card box-shadow h-100">
+      <img src="{{imageUrl}}" class="card-img-top book-cover" alt="{{title}}">
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">{{title}}</h5>
+        <strong>{{author}}</strong>
+        <p class="card-text mt-20 text-muted small">
+          {{description}}
         </p>
-        <a href="/checkout?item=1" class="btn btn-primary btn-block">Purchase — $23</a>
+        <p class="mt-auto mb-2">
+          <span class="price-tag">${{priceLabel}}</span>
+        </p>
+        <p class="small text-muted mb-3">In stock: <strong>{{stock}}</strong></p>
+        <a href="/checkout?productId={{id}}" class="btn btn-primary btn-block">Buy now</a>
       </div>
     </div>
   </div>
-  <div class="col">
-    <div class="card box-shadow">
-      <img src="/images/prince-of-persia.jpg" class="card-img-top" alt="...">
-      <div class="card-body">
-        <h5 class="card-title">The Making of Prince of Persia: Journals 1985-1993</h5>
-        <strong>Jordan Mechner</strong>
-        <p class="card-text mt-20">
-            In The Making of Prince of Persia, on the 30th anniversary of the game’s release, Mechner looks back at the journals he kept from 1985 to 1993..
-        </p>
-        <a href="/checkout?item=2" class="btn btn-primary btn-block">Purchase - $25</a>
-      </div>
-    </div>
+  {{else}}
+  <div class="col-12">
+    <p class="text-center text-muted">No books available yet. Run <code>node seed.js</code> after connecting MongoDB.</p>
   </div>
-  <div class="col">
-    <div class="card box-shadow">
-      <img src="/images/working-in-public.jpg" class="card-img-top" alt="...">
-      <div class="card-body">
-        <h5 class="card-title">Working in Public: The Making and Maintenance of Open Source</h5>
-        <strong>Nadia Eghbal</strong>
-        <p class="card-text mt-20">
-          Nadia Eghbal takes an inside look at modern open source and offers a model through which to understand the challenges faced by online creators.
-        </p>
-        <a href="/checkout?item=3" class="btn btn-primary btn-block">Purchase - $28</a>
-      </div>
-    </div>
-  </div>
+  {{/each}}
 </div>

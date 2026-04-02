@@ -1,9 +1,10 @@
 {
   "name": "sa-takehome-project-node",
   "version": "1.0.0",
-  "description": "SA Takehome Project",
+  "description": "SA Takehome Project — Stripe Press bookstore",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "seed": "node seed.js"
   },
   "author": "Matt Mitchell",
   "license": "MIT",
@@ -11,7 +12,7 @@
     "dotenv": "^10.0.0",
     "express": "^4.13.3",
     "express-handlebars": "^5.2.1",
-    "path": "^0.12.7",
+    "mongodb": "^6.3.0",
     "stripe": "^8.137.0"
   }
 }

@@ -22,3 +22,23 @@ h1, h2, h3, h4 {
   border-color: #ccc;
   padding: 5px;
 }
+
+.book-cover {
+  object-fit: cover;
+  max-height: 320px;
+  width: 100%;
+}
+
+.price-tag {
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: #1a1f36;
+}
+
+.payment-element-box {
+  padding: 12px 0;
+}
+
+.max-width-confirmation {
+  max-width: 480px;
+}
