@@ -1,0 +1,44 @@
+{{#if error}}
+<div class="row justify-content-md-center mt-40">
+  <div class="col-lg-6 text-center">
+    <h1 class="h4">Subscription</h1>
+    <p class="text-secondary">{{error}}</p>
+    {{#if paymentIntentId}}
+    <p class="small text-muted">Reference: {{paymentIntentId}}</p>
+    {{/if}}
+    <a href="/foodnow/subscribe" class="btn btn-primary mt-3">Try again</a>
+  </div>
+</div>
+{{else}}
+<div class="row justify-content-md-center mt-40">
+  <div class="col-lg-8 text-center">
+    <h1 class="display-4 text-primary mb-3">Welcome to FoodNow Plus!</h1>
+    <p class="lead text-secondary">Your membership is active. Enjoy free delivery on qualifying orders.</p>
+
+    <div class="table-responsive text-left mt-4">
+      <table class="table table-bordered bg-white shadow-sm">
+        <tbody>
+          <tr>
+            <th scope="row">Plan</th>
+            <td>FoodNow Plus</td>
+          </tr>
+          <tr>
+            <th scope="row">Monthly fee</th>
+            <td>AU$9.90</td>
+          </tr>
+          <tr>
+            <th scope="row">Subscription ID</th>
+            <td><code>{{subscriptionId}}</code></td>
+          </tr>
+          <tr>
+            <th scope="row">Next billing date</th>
+            <td>{{nextBillingLabel}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <a href="/foodnow" class="btn btn-primary btn-lg mt-4">Start ordering with free delivery</a>
+  </div>
+</div>
+{{/if}}

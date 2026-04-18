@@ -4,7 +4,9 @@
   "description": "SA Takehome Project — Stripe Press bookstore",
   "scripts": {
     "start": "node app.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "seed:foodnow": "node seed-foodnow.js",
+    "setup:connect": "node setup-connect.js"
   },
   "author": "Matt Mitchell",
   "license": "MIT",

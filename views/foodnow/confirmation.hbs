@@ -1,0 +1,58 @@
+{{#if error}}
+<div class="row justify-content-md-center mt-40">
+  <div class="col-lg-6 text-center">
+    <h1 class="h4">We could not confirm your order</h1>
+    <p class="text-secondary">{{error}}</p>
+    {{#if paymentIntentId}}
+    <p class="small text-muted">Reference: {{paymentIntentId}}</p>
+    {{/if}}
+    <a href="/foodnow" class="btn btn-primary mt-3">Back to FoodNow</a>
+  </div>
+</div>
+{{else}}
+<div class="row justify-content-md-center mt-40">
+  <div class="col-lg-8">
+    <div class="text-center mb-4">
+      <p class="display-4 text-success mb-2" aria-hidden="true">✓</p>
+      <h1 class="h2">Order confirmed — enjoy your meal!</h1>
+      <p class="text-secondary">Thank you for ordering through FoodNow.</p>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered bg-white shadow-sm">
+        <tbody>
+          <tr>
+            <th scope="row">Dish ordered</th>
+            <td>{{dishName}}</td>
+          </tr>
+          <tr>
+            <th scope="row">Restaurant</th>
+            <td>Malay Kitchen</td>
+          </tr>
+          <tr>
+            <th scope="row">Amount paid</th>
+            <td>AU${{amountPaid}}</td>
+          </tr>
+          <tr>
+            <th scope="row">Platform fee retained by FoodNow</th>
+            <td>AU${{platformFee}}</td>
+          </tr>
+          <tr>
+            <th scope="row">Amount sent to restaurant</th>
+            <td>AU${{restaurantReceives}}</td>
+          </tr>
+          <tr>
+            <th scope="row">Payment ID</th>
+            <td><code>{{paymentIntentId}}</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="text-center mt-4">
+      <a href="/foodnow" class="btn btn-primary btn-lg mr-2 mb-2">Order again</a>
+      <a href="/foodnow/subscribe" class="btn btn-outline-primary btn-lg mb-2">Subscribe to FoodNow Plus</a>
+    </div>
+  </div>
+</div>
+{{/if}}

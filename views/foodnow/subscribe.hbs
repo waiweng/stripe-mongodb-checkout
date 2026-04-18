@@ -1,0 +1,70 @@
+{{#if error}}
+<div class="row justify-content-md-center mt-40">
+  <div class="col-lg-6 text-center">
+    <p class="text-danger">{{error}}</p>
+    <a href="/foodnow" class="btn btn-primary mt-2">Back to FoodNow</a>
+  </div>
+</div>
+{{else}}
+<div class="row justify-content-md-center">
+  <div class="col-lg-8">
+    <div class="text-center mt-40 mb-4">
+      <h1 class="display-4">FoodNow Plus</h1>
+      <p class="lead mb-0">AU$9.90/month</p>
+      <p class="text-secondary">Unlock member benefits across Malay Kitchen and partner restaurants.</p>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col-md-6 mb-3">
+        <ul class="list-unstyled">
+          <li class="mb-2">✓ Free delivery on every order</li>
+          <li class="mb-2">✓ Priority restaurant matching</li>
+        </ul>
+      </div>
+      <div class="col-md-6 mb-3">
+        <ul class="list-unstyled">
+          <li class="mb-2">✓ Exclusive member-only dishes</li>
+          <li class="mb-2">✓ Cancel anytime</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card box-shadow">
+      <div class="card-body">
+        <div
+          id="foodnow-subscribe-config"
+          data-publishable-key="{{stripePublishableKey}}"
+          data-return-url="{{returnUrl}}"
+        ></div>
+
+        <div id="foodnow-subscribe-step-details">
+          <h6 class="text-uppercase text-muted small">Your details</h6>
+          <div class="form-group">
+            <label for="foodnowSubCustomerName">Full name</label>
+            <input type="text" class="form-control" id="foodnowSubCustomerName" required autocomplete="name" placeholder="Aisha Rahman">
+          </div>
+          <div class="form-group">
+            <label for="foodnowSubCustomerEmail">Email</label>
+            <input type="email" class="form-control" id="foodnowSubCustomerEmail" required autocomplete="email" placeholder="you@example.com">
+          </div>
+          <button type="button" class="btn btn-primary btn-lg btn-block" id="foodnow-sub-btn-prepare">
+            Continue to secure payment
+          </button>
+        </div>
+
+        <div id="foodnow-subscribe-step-pay" class="d-none">
+          <h6 class="text-uppercase text-muted small mt-4">Payment</h6>
+          <div id="foodnow-subscribe-payment-element" class="payment-element-box"></div>
+          <button type="button" class="btn btn-primary btn-lg btn-block mt-3" id="foodnow-sub-btn-submit">
+            Start my FoodNow Plus membership
+          </button>
+          <p class="small text-muted text-center mt-3 mb-0">
+            You'll be charged AU$9.90 today and monthly thereafter. Cancel anytime from your account.
+          </p>
+          <p class="small text-muted text-center">Secured by Stripe</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
