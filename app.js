@@ -550,14 +550,10 @@ app.get('/foodnow/confirmation', async function renderFoodnowConfirmation(req, r
  * FoodNow Plus subscription landing page with benefits and Payment Element (after create-subscription returns a client secret).
  */
 app.get('/foodnow/subscribe', async function renderFoodnowSubscribe(req, res) {
-  const baseUrl = req.protocol + '://' + req.get('host');
-  const returnUrl = baseUrl + '/foodnow/subscription-confirmation?payment_intent={PAYMENT_INTENT_ID}';
-
   res.render('foodnow/subscribe', {
     foodnowLayout: true,
     pageTitle: 'FoodNow Plus',
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-    returnUrl: returnUrl,
     loadStripeScript: true,
     loadFoodnowSubscribeScript: true,
   });
@@ -582,6 +578,7 @@ app.post('/foodnow/create-subscription', async function createFoodnowSubscriptio
 
     res.json({
       clientSecret: result.clientSecret,
+      subscriptionId: result.subscriptionId,
     });
   } catch (error) {
     console.error(error);
@@ -591,9 +588,11 @@ app.post('/foodnow/create-subscription', async function createFoodnowSubscriptio
 
 /**
  * Confirms subscription signup after Stripe redirects back with the PaymentIntent that paid the first invoice.
+ * Basil API versions often omit invoice on PaymentIntent; the client sends subscription_id on the return URL so we can load billing dates reliably.
  */
 app.get('/foodnow/subscription-confirmation', async function renderFoodnowSubscriptionConfirmation(req, res) {
   const paymentIntentId = req.query.payment_intent;
+  const subscriptionIdFromQuery = req.query.subscription_id;
 
   if (!paymentIntentId) {
     return res.status(400).render('foodnow/subscription-confirmation', {
@@ -604,9 +603,7 @@ app.get('/foodnow/subscription-confirmation', async function renderFoodnowSubscr
   }
 
   try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-      expand: ['invoice.subscription'],
-    });
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
       return res.status(400).render('foodnow/subscription-confirmation', {
@@ -620,7 +617,28 @@ app.get('/foodnow/subscription-confirmation', async function renderFoodnowSubscr
     let subscriptionId = null;
     let nextBillingTimestamp = null;
 
-    if (paymentIntent.invoice) {
+    // Prefer subscription id from return_url (added by the client after create-subscription); Basil may not link invoice on PaymentIntent.
+    if (subscriptionIdFromQuery && subscriptionIdFromQuery.startsWith('sub_')) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionIdFromQuery);
+
+      const piCustomer = paymentIntent.customer;
+      const subCustomer = subscription.customer;
+      const piCustId = typeof piCustomer === 'string' ? piCustomer : piCustomer && piCustomer.id;
+      const subCustId = typeof subCustomer === 'string' ? subCustomer : subCustomer && subCustomer.id;
+
+      if (!piCustId || !subCustId || piCustId !== subCustId) {
+        return res.status(400).render('foodnow/subscription-confirmation', {
+          foodnowLayout: true,
+          pageTitle: 'FoodNow Plus',
+          error: 'Subscription does not match this payment.',
+        });
+      }
+
+      subscriptionId = subscription.id;
+      nextBillingTimestamp = subscription.current_period_end;
+    }
+
+    if (!subscriptionId && paymentIntent.invoice) {
       let invoice = paymentIntent.invoice;
 
       if (typeof invoice === 'string') {
@@ -647,11 +665,51 @@ app.get('/foodnow/subscription-confirmation', async function renderFoodnowSubscr
     }
 
     if (!subscriptionId) {
+      const chargesList = await stripe.charges.list({
+        payment_intent: paymentIntentId,
+        limit: 10,
+      });
+
+      for (let i = 0; i < chargesList.data.length; i++) {
+        const charge = chargesList.data[i];
+
+        if (!charge.invoice) {
+          continue;
+        }
+
+        const invId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice.id;
+        const invoice = await stripe.invoices.retrieve(invId, {
+          expand: ['subscription'],
+        });
+
+        let sub = invoice.subscription;
+
+        if (typeof sub === 'string') {
+          subscriptionId = sub;
+        } else if (sub && sub.id) {
+          subscriptionId = sub.id;
+          if (sub.current_period_end) {
+            nextBillingTimestamp = sub.current_period_end;
+          }
+        }
+
+        if (subscriptionId) {
+          break;
+        }
+      }
+    }
+
+    if (!subscriptionId) {
       return res.status(400).render('foodnow/subscription-confirmation', {
         foodnowLayout: true,
         pageTitle: 'FoodNow Plus',
         error: 'Could not read subscription details from Stripe.',
       });
+    }
+
+    if (!nextBillingTimestamp) {
+      const fullSub = await stripe.subscriptions.retrieve(subscriptionId);
+      nextBillingTimestamp = fullSub.current_period_end;
     }
 
     await markFoodnowSubscriptionActiveIfPending(mongo.db, subscriptionId);
