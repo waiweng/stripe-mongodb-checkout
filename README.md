@@ -6,6 +6,8 @@ This project is intentionally kept simple and readable. Every route, every datab
 
 Built with **Node.js / Express**, the **MongoDB native driver**, plain **HTML/CSS**, and **Bootstrap** for layout.
 
+**Branch `foodnow`:** This repo also has a **FoodNow** extension (Stripe Connect + Payment Element + Billing for a restaurant demo). See **[FoodNow platform demo (`foodnow` branch)](#foodnow-platform-demo-foodnow-branch)** below for checkout instructions, env vars, and routes.
+
 ### End-to-end purchase flow
 
 The walkthrough below follows a shopper from the **Stripe Press Shop** catalogue through a completed sale. The user chooses **Buy now**, lands on **checkout**, and enters **full name** and **email**. The page then loads the **Stripe Payment Element** (embedded UI): the server has already created a **PaymentIntent**; the Element collects the card and completes that intent when the customer pays.
@@ -125,6 +127,122 @@ Use a success card (e.g. `4242…` or complete the `4000 0025…` authentication
 | **MongoDB** → **`payment_events`** | Rows with **`stripe_event_id`** (`evt_…`), **`event_type`**, **`processed_successfully`**, and the stored **`payload`**. |
 
 If something fails, check the server logs and that `stripe listen` is forwarding to the same port as your app.
+
+---
+
+### FoodNow platform demo (`foodnow` branch)
+
+The **`foodnow`** branch extends this project with a second, parallel demo: **FoodNow**, a fictional food-delivery platform featuring **Malay Kitchen**. It is meant for Solutions Architect walkthroughs and keeps the original **Stripe Press** bookstore routes unchanged. All FoodNow URLs are prefixed with **`/foodnow`**.
+
+It demonstrates three Stripe surfaces together:
+
+| Topic | What the demo shows |
+|-------|---------------------|
+| **Stripe Connect** | Destination charges: the customer pays the full order amount; **`application_fee_amount`** keeps a platform percentage for FoodNow; the rest is transferred to the connected account (**Malay Kitchen**). |
+| **Payment Element** | Same embedded checkout pattern as the bookstore, applied to a single menu item checkout. |
+| **Stripe Billing** | **FoodNow Plus** — AU$9.90/month subscription (`default_incomplete` + Payment Element for the first invoice). |
+
+#### Prerequisites (in addition to the main app)
+
+- **Stripe Connect** enabled on your Stripe account (test mode is fine). The one-time setup script creates a **Custom** connected account with Stripe’s **test-mode bypass** fields so you can run transfers without live onboarding.
+- Same **MongoDB Atlas** cluster (replica set) as the bookstore — FoodNow uses additional collections in the same **`bookstore`** database.
+
+#### Check out the branch
+
+```bash
+git fetch origin
+git checkout foodnow
+```
+
+If you work from a fork, ensure **`origin`** points at your Git remote (for example `https://github.com/waiweng/stripe-mongodb-checkout`).
+
+#### Install and base `.env`
+
+Follow **Install dependencies** and copy **`.env.example`** → **`.env`** as in the main setup. You still need `STRIPE_*`, `MONGODB_URI`, and `STRIPE_WEBHOOK_SECRET` for webhooks.
+
+#### FoodNow-specific environment variables
+
+Add or fill these (see **`.env.example`**):
+
+| Variable | Purpose |
+|----------|---------|
+| **`RESTAURANT_CONNECTED_ACCOUNT_ID`** | Connected account id (`acct_…`) for Malay Kitchen. Written automatically by the Connect setup script (see below). |
+| **`PLATFORM_FEE_PERCENT`** | Platform fee as a percent of the order (e.g. `15` for 15%). |
+| **`FOODNOW_PLUS_PRICE_ID`** | Optional. Leave empty to auto-create a **FoodNow Plus** recurring Price on first subscription; the app can append the new id to **`.env`**. |
+| **`STRIPE_WEBHOOK_SECRET_FOODNOW`** | Optional. Use if you register a **second** webhook endpoint in the Dashboard that points only at **`/foodnow/webhook`**; otherwise the main **`STRIPE_WEBHOOK_SECRET`** used with **`/webhook`** is enough. |
+
+#### One-time Stripe Connect setup (Malay Kitchen)
+
+From the project root, with **`STRIPE_SECRET_KEY`** set in **`.env`**:
+
+```bash
+npm run setup:connect
+```
+
+This runs **`setup-connect.js`**, which creates a **Custom** AU connected account (test bypass data), then updates **`RESTAURANT_CONNECTED_ACCOUNT_ID`** in **`.env`**. Restart the app after it runs so `process.env` picks up the new value.
+
+#### Seed the FoodNow menu
+
+```bash
+npm run seed:foodnow
+```
+
+This recreates the **`foodnow_menu`** collection with three Malaysian dishes (prices in **AUD**). Run **`node seed.js`** first if you still want the bookstore catalogue.
+
+#### Run the app and open FoodNow
+
+```bash
+npm start
+```
+
+- **FoodNow home:** [http://localhost:3000/foodnow](http://localhost:3000/foodnow)  
+- **Bookstore (unchanged):** [http://localhost:3000](http://localhost:3000)  
+- **FoodNow Plus:** [http://localhost:3000/foodnow/subscribe](http://localhost:3000/foodnow/subscribe)
+
+Use the same test cards as in the table above (e.g. **`4242 4242 4242 4242`**).
+
+#### Webhooks (FoodNow + bookstore)
+
+The main **`POST /webhook`** handler processes **`payment_intent.succeeded`** for both bookstore orders and FoodNow orders (FoodNow PaymentIntents include metadata so the correct MongoDB completion runs). It also handles **`invoice.payment_succeeded`** for FoodNow Plus so subscription state stays in sync.
+
+For local testing, one Stripe CLI forwarder is usually enough:
+
+```bash
+stripe listen --forward-to localhost:3000/webhook
+```
+
+Copy the printed **`whsec_…`** into **`STRIPE_WEBHOOK_SECRET`** and restart **`npm start`** if needed.
+
+Optionally, add a Dashboard endpoint for **`/foodnow/webhook`** and set **`STRIPE_WEBHOOK_SECRET_FOODNOW`** to that endpoint’s signing secret.
+
+#### FoodNow routes (summary)
+
+| Method | Path | Role |
+|--------|------|------|
+| GET | **`/foodnow`** | Menu (reads **`foodnow_menu`**). |
+| GET | **`/foodnow/checkout`** | Checkout for one dish (`menuItemId` query). |
+| POST | **`/foodnow/create-payment-intent`** | Creates Connect **PaymentIntent** + pending **`foodnow_orders`** row. |
+| GET | **`/foodnow/confirmation`** | Order confirmation after pay. |
+| GET | **`/foodnow/subscribe`** | FoodNow Plus landing page. |
+| POST | **`/foodnow/create-subscription`** | Creates incomplete subscription; returns client secret (and subscription id for the return URL). |
+| GET | **`/foodnow/subscription-confirmation`** | After subscription payment redirect. |
+| POST | **`/foodnow/webhook`** | Optional dedicated webhook URL (same event types as above for FoodNow-related events). |
+
+#### FoodNow files and MongoDB collections
+
+| Path / collection | Role |
+|-------------------|------|
+| **`lib/foodnowHelpers.js`** | Connect PaymentIntent creation, fee math, FoodNow Plus subscription helper, FoodNow order completion transaction. |
+| **`seed-foodnow.js`** | Seeds **`foodnow_menu`**. |
+| **`setup-connect.js`** | One-time Custom Connect account + **`.env`** update. |
+| **`views/foodnow/*.hbs`** | FoodNow pages. |
+| **`public/js/foodnow-checkout.js`**, **`public/js/foodnow-subscribe.js`** | Payment Element flows for orders and subscriptions. |
+| **`foodnow_menu`** | Menu items (name, price, image filename, stock, …). |
+| **`foodnow_customers`** | Shoppers (linked to Stripe Customer id). |
+| **`foodnow_orders`** | Food orders (pending → completed; ties to **`stripe_payment_intent_id`**). |
+| **`foodnow_subscriptions`** | FoodNow Plus rows (`pending` / `active`). |
+
+The original **`products`**, **`orders`**, **`customers`**, and **`payment_events`** collections still support the bookstore demo on the same branch.
 
 ---
 
